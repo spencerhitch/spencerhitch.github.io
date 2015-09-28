@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>CS164: Language Popularity</title>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://underscorejs.org/underscore-min.js" charset="utf-8"></script>
+    <style>
+      .axis path,
+      .axis line {
+          fill: none;
+          stroke: black;
+          shape-rendering: crispEdges;
+      }
+
+      .axis text {
+          font-family: sans-serif;
+          font-size: 11px;
+      }
+      .paradigmSelect {
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <script>
+
+      var margin = {top: 20, right: 10, bottom: 20, left: 10};
+      var width = 1200 - margin.left - margin.right,
+          height = 600 - margin.top - margin.bottom;
+      var padding = {top: 30, right: 60, bottom: 30, left: 30};
+
+      var svg = d3.select("body").append("svg").attr("width", width + margin.left + margin.right)
+                                               .attr("height", height + margin.top + margin.bottom)
+                                               .append("g")
+                                               .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var dataset = [];
+      var x = d3.scale.linear();
+      var y = d3.scale.log();
+      var xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
+      var yAxis = d3.svg.axis().scale(y).orient("left");
+  
+      var computedParadigms = [];
+      var computedInfluenced = [];
+      var computedNames = [];
+      var allParadigms = [];
+
+      var paradigmSelect = d3.select("body").append("select").attr("class", "paradigmSelect");
+      paradigmSelect.append("option").attr("value", "")
+                                     .text("-");
+      paradigmSelect.on("change", redraw);
+
+
+      svg.append("g").attr("class", "x axis")
+                     .attr("transform", "translate(0," + (height-padding.top) + ")")
+                     .call(xAxis);
+      svg.append("g").attr("class", "y axis")
+                     .attr("transform", "translate(" + padding.left + ",0)") 
+                     .call(yAxis);
+      
+    
+      d3.json('data.json', function(d0) {
+
+        computedParadigms = _.map(d0, function(d) {return d.paradigms});
+        computedInfluenced = _.map(d0, function(d) {
+          return d.influenced;
+        });
+        computedNames = _.map(d0, function(d) {
+          return d.name;
+        });
+        _.each(computedInfluenced, function(d,i){
+          computedInfluenced[i] = _.map(d, function(d1){
+            var index = _.indexOf(computedNames, d1)
+            if (index != -1) {
+              var datum = d0[index];
+              return [datum.year, datum.nbRepos];
+            }
+              return null;
+          });
+        });
+        allParadigms = _.flatten(computedParadigms);
+        allParadigms = _.uniq(allParadigms);
+
+        paradigmSelect.selectAll("option").data(allParadigms).enter().append("option")
+                                    .attr("value", function(d) {return d;})
+                                    .text(function(d) {return d;});
+
+        dataset = d0;
+        redraw();
+      });
+
+      function redraw() {
+        var paradigm = paradigmSelect.property("value");
+        var computedDataset= [];
+        var computedYearRepoMap = [];
+
+        if (paradigm == "") {
+          computedDataset = dataset;
+        } else {
+          _.each(dataset, function(d,i) {
+            if (_.contains(computedParadigms[i], paradigm)) {
+              computedDataset.push(d);
+            }
+          });
+        }
+        computedYearRepoMap= _.map(computedDataset, function(d){ return [d.year,d.nbRepos]; });
+
+        x.domain(d3.extent(computedDataset, function(d) {return d.year}))
+          .range([padding.left, width- padding.right]);
+        y.domain(d3.extent(computedDataset, function(d) {return d.nbRepos}))
+          .range([height- padding.top, padding.bottom]);
+
+        var language = svg.selectAll(".language").data(computedDataset, function(d) { return d.name });
+        language.exit()
+          .transition()
+          .duration(500)
+          .style("fill-opacity", 0)
+          .remove();
+        var languageEnter = language.enter().insert("g", ".axis")
+          .attr("class", "language")
+          .attr("transform", function(d) { return "translate(" + x(d.year) + "," +  y(d.nbRepos) + ")";})
+          .style("fill-opacity",0);
+        languageEnter.append("circle")
+          .attr("r", 5)
+          .attr("fill", "#BBB")
+          .attr("stroke", "black")
+          .on("mouseover",function() {
+            d3.select(this).attr("fill","red")
+            d3.select(this.parentNode).selectAll(".lineGroup").attr("display","inherit");
+          })
+          .on("mouseout",function() {
+            d3.select(this).attr("fill","#BBB")
+            d3.select(this.parentNode).selectAll(".lineGroup").attr("display","none");
+          });
+        languageEnter.append("text")
+          .attr("font-family", "sans-serif")
+          .attr("font-size", "11px")
+          .attr("fill", "red")
+          .attr("x", 6)
+          .attr("y", -6)
+          .text(function(d) {return d.name});
+
+        languageEnter.append("g")
+          .attr("class", function(d) {
+            return d.name + " lineGroup";
+          })
+          .attr("display", "none");
+
+        console.log(computedYearRepoMap);
+        _.each(computedDataset, function(d) {
+          var lineGroup = svg.select("." + d.name + ".lineGroup");
+          lineGroup.selectAll("line").remove();
+          var index = _.indexOf(computedNames, d.name);
+          _.each(computedInfluenced[index], function(d0) {
+            if (d0 != null){ //&& _.contains(computedYearRepoMap, d0)){
+              lineGroup.append("line")
+                .attr("x1", 0)
+                .attr("y1", 0)
+                .attr("x2", x(d0[0]) - x(d.year) )
+                .attr("y2", y(d0[1]) - y(d.nbRepos) )
+                .attr("stroke", "black")
+                .attr("stroke-width", "0.5px");
+            }
+          });
+        });
+
+        language.transition()
+          .attr("transform", function(d) { return "translate(" + x(d.year) + "," +  y(d.nbRepos) + ")";})
+          .style("fill-opacity", 1);
+        
+        
+          
+        svg.select(".x.axis")
+            .transition()
+            .duration(500)
+            .call(xAxis);
+
+        svg.select(".y.axis")
+            .transition()
+            .duration(500)
+            .call(yAxis);
+      }
+
+
+    </script>
+  </body>
+
+</html>
