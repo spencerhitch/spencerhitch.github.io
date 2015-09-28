@@ -18,8 +18,6 @@
           font-family: sans-serif;
           font-size: 11px;
       }
-      .paradigmSelect {
-      }
     </style>
   </head>
 
@@ -27,43 +25,64 @@
 
     <script>
 
+      /* Set the MARGINs and PADDING for d3 to generate the SVG within.
+         Store as variables for later reference*/
       var margin = {top: 20, right: 10, bottom: 20, left: 10};
       var width = 1200 - margin.left - margin.right,
           height = 600 - margin.top - margin.bottom;
       var padding = {top: 30, right: 60, bottom: 30, left: 30};
 
+      /* Append an svg to the html body.
+         This is where all our d3 action will take place */
       var svg = d3.select("body").append("svg").attr("width", width + margin.left + margin.right)
-                                               .attr("height", height + margin.top + margin.bottom)
-                                               .append("g")
-                                               .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      /* Store a global dataset so we don't have to
+         continually use d3.json callbacks. */
       var dataset = [];
+
+      /* Functions by which we will scale our x and y
+         positions and axes */
       var x = d3.scale.linear();
       var y = d3.scale.log();
       var xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
       var yAxis = d3.svg.axis().scale(y).orient("left");
   
+      /* Global arrays which store pre-computed data.
+         Limit the amount of computation at graph generation. */
       var computedParadigms = [];
       var computedInfluenced = [];
       var computedNames = [];
       var allParadigms = [];
 
+      /* Append a selection menu to the html body.
+         This will be used to select particular programming paradigms.
+         When a paradigm is selected, redraw() will be triggered.  */
       var paradigmSelect = d3.select("body").append("select").attr("class", "paradigmSelect");
       paradigmSelect.append("option").attr("value", "")
-                                     .text("-");
+        .text("-");
       paradigmSelect.on("change", redraw);
 
 
+      /* Append the axes to our svg and move each to their respective position */
       svg.append("g").attr("class", "x axis")
-                     .attr("transform", "translate(0," + (height-padding.top) + ")")
-                     .call(xAxis);
+        .attr("transform", "translate(0," + (height-padding.top) + ")")
+        .call(xAxis);
       svg.append("g").attr("class", "y axis")
-                     .attr("transform", "translate(" + padding.left + ",0)") 
-                     .call(yAxis);
+        .attr("transform", "translate(" + padding.left + ",0)") 
+        .call(yAxis);
       
     
+      /* Call to data.json for computing our total dataset */
       d3.json('data.json', function(d0) {
 
+        /* Set COMPUTEDPARADIGMS as a list of each item in D0's "paradigms", 
+           COMPUTEDINFLUENCED as the same for "influenced", 
+           and COMPUTEDNAMES as an inorder list of all of D0's programming language names.
+           Then remap COMPUTEDINFLUENCED to instead be ["year", "nbRepos"] for each language,
+           these will correspond to the x1 and y1 values of the influence lines 
+           ALLPARADIGMS is simply a list of every paradigm mentioned in the dataset. */
         computedParadigms = _.map(d0, function(d) {return d.paradigms});
         computedInfluenced = _.map(d0, function(d) {
           return d.influenced;
@@ -84,45 +103,58 @@
         allParadigms = _.flatten(computedParadigms);
         allParadigms = _.uniq(allParadigms);
 
+        /* Us ALLPARADIGMS to generate the content for the select html object */
         paradigmSelect.selectAll("option").data(allParadigms).enter().append("option")
                                     .attr("value", function(d) {return d;})
                                     .text(function(d) {return d;});
 
+        /* Set our global DATASET to the json return and trigger a graph draw. */
         dataset = d0;
         redraw();
       });
 
+      /* Adjusts, adds, and removes content from our SVG. */
       function redraw() {
-        var paradigm = paradigmSelect.property("value");
-        var computedDataset= [];
-        var computedYearRepoMap = [];
 
+        /* Store the current value from the select menu. 
+           Create local variables. */
+        var paradigm = paradigmSelect.property("value");
+        var drawDataset= [];
+        var drawYearRepoMap = [];
+
+        /* Compute which languages pass paradigm test to join
+           our local DRAWDATASET. Store their year and nbRepos info. */
         if (paradigm == "") {
-          computedDataset = dataset;
+          drawDataset = dataset;
         } else {
           _.each(dataset, function(d,i) {
             if (_.contains(computedParadigms[i], paradigm)) {
-              computedDataset.push(d);
+              drawDataset.push(d);
             }
           });
         }
-        computedYearRepoMap= _.map(computedDataset, function(d){ return [d.year,d.nbRepos]; });
+        drawYearRepoMap= _.map(drawDataset, function(d){ return [d.year,d.nbRepos]; });
 
-        x.domain(d3.extent(computedDataset, function(d) {return d.year}))
+        /* Adjust the domain and range of our scales */
+        x.domain(d3.extent(drawDataset, function(d) {return d.year}))
           .range([padding.left, width- padding.right]);
-        y.domain(d3.extent(computedDataset, function(d) {return d.nbRepos}))
+        y.domain(d3.extent(drawDataset, function(d) {return d.nbRepos}))
           .range([height- padding.top, padding.bottom]);
 
-        var language = svg.selectAll(".language").data(computedDataset, function(d) { return d.name });
+        /* Update our currently represented data. */
+        var language = svg.selectAll(".language").data(drawDataset, function(d) { return d.name });
+        /* Remove our exits*/
         language.exit()
           .transition()
           .duration(500)
           .style("fill-opacity", 0)
           .remove();
+        /* Append a group for each new item*/
         var languageEnter = language.enter().insert("g", ".axis")
           .attr("class", "language")
           .attr("transform", function(d) { return "translate(" + x(d.year) + "," +  y(d.nbRepos) + ")";})
           .style("fill-opacity",0);
+        /* Append a circle to our group */
         languageEnter.append("circle")
           .attr("r", 5)
           .attr("fill", "#BBB")
@@ -135,6 +167,7 @@
             d3.select(this).attr("fill","#BBB")
             d3.select(this.parentNode).selectAll(".lineGroup").attr("display","none");
           });
+        /* Append text to our group */
         languageEnter.append("text")
           .attr("font-family", "sans-serif")
           .attr("font-size", "11px")
@@ -143,19 +176,21 @@
           .attr("y", -6)
           .text(function(d) {return d.name});
 
+        /* Append a group of influenced lines to our group */
         languageEnter.append("g")
           .attr("class", function(d) {
             return d.name + " lineGroup";
           })
           .attr("display", "none");
 
-        console.log(computedYearRepoMap);
-        _.each(computedDataset, function(d) {
+        /* Delete and redraw the influenced lines for 
+           every item we're currently displaying  */
+        _.each(drawDataset, function(d) {
           var lineGroup = svg.select("." + d.name + ".lineGroup");
           lineGroup.selectAll("line").remove();
           var index = _.indexOf(computedNames, d.name);
           _.each(computedInfluenced[index], function(d0) {
-            if (d0 != null){ //&& _.contains(computedYearRepoMap, d0)){
+            if (d0 != null){ //&& _.contains(drawYearRepoMap, d0)){
               lineGroup.append("line")
                 .attr("x1", 0)
                 .attr("y1", 0)
@@ -167,17 +202,16 @@
           });
         });
 
+        /* Update the positions of our data. */
         language.transition()
           .attr("transform", function(d) { return "translate(" + x(d.year) + "," +  y(d.nbRepos) + ")";})
           .style("fill-opacity", 1);
         
-        
-          
+        /* Update our axes' scales */ 
         svg.select(".x.axis")
             .transition()
             .duration(500)
             .call(xAxis);
-
         svg.select(".y.axis")
             .transition()
             .duration(500)
