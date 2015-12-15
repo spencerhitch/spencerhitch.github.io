@@ -1,0 +1,74 @@
+.header-bar{
+  position:fixed;
+  width:100%;
+  background-color:rgba(255, 255, 255, 0.75);
+  z-index:3;
+}
+
+.sidebar{
+  position:fixed;
+  margin-top:10%;
+  width:294px;
+}
+
+.body_container{
+  top:58px;
+}
+
+.content{
+}
+
+.sidebar_column{
+  min-height:1px;
+}
+
+
+.home-header{
+  display:inline-block;
+  margin-bottom:0;
+}
+
+.home{
+  text-decoration:none;
+  color:black;
+}
+
+.nav-bar {
+  margin-top:5px;
+  display:inline-block;
+  float:right;
+}
+
+.posts-view {
+  margin-top:18%;
+  margin-bottom:200px;
+  margin-left:25%;
+}
+
+.post-link{
+  text-decoration:none;
+}
+
+.post-list {
+  list-style-type:none;
+}
+
+.footer-list {
+  list-style-type:none;
+}
+
+.icon > svg {
+  display: inline-block;
+  text-align:center;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle; }
+  .icon > svg path {
+    fill: #828282; }
+
+.avatar{
+  display:block;
+  margin:auto auto 40px;
+  width:200px;
+  border-radius:50%;
+}

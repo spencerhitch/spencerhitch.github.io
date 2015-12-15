@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+  {% include head.html %}
+
+  <body>
+
+    <div class="header-bar">
+      {% include header.html %}
+    </div>
+
+    <div class="container body_container">    
+      <div class="row">      
+
+        <div class="four columns sidebar_column">
+          <div class="sidebar">
+            {% include footer.html %}
+          </div>
+        </div>
+
+        <div class="eight columns content">
+          {{ content }}
+        </div>
+
+      </div>
+    </div>
+
+
+  </body>
+
+</html>
