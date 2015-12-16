@@ -7,7 +7,7 @@ description: > # this means to ignore newlines until "baseurl:"
   Finnegans Wake, Motorcycles,
   RegExs, Zen, coffee, riddles,
   data visualization, composition,
-  cigarettes and lucid dreaming 
+  beer and lucid dreaming 
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://spencerhitch.github.io" # the base hostname & protocol for your site
 twitter_username: spencerhitch 
